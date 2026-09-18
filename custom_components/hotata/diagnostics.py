@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
+from .api import _redact_sensitive
 from .const import DOMAIN
 from .coordinator import HotataCoordinator
 from .hub import HotataAccount
@@ -23,21 +24,18 @@ def _mask_username(value: Any) -> str:
     return "****"
 
 
-def _redact_entry_data(data: dict[str, Any]) -> dict[str, Any]:
-    """Redact credentials (tokens truncated, passwords/usernames masked).
+_REDACT_KEYS = ("password", "token", "secret", "identity", "registered")
 
-    Matches by substring so ``backup_password`` and ``backup_username``
-    cannot leak the way an exact-key check allowed.
-    """
+
+def _redact_entry_data(data: dict[str, Any]) -> dict[str, Any]:
+    """Redact credentials and identifiers from entry data."""
     redacted: dict[str, Any] = {}
     for key, value in data.items():
         lowered = key.lower()
-        if "password" in lowered:
-            redacted[key] = "<redacted>"
-        elif "username" in lowered:
+        if "username" in lowered:
             redacted[key] = _mask_username(value)
-        elif "token" in lowered:
-            redacted[key] = value if isinstance(value, str) and len(value) <= 40 else str(value)[:40] + "..."
+        elif any(rk in lowered for rk in _REDACT_KEYS):
+            redacted[key] = "<redacted>"
         else:
             redacted[key] = value
     return redacted
@@ -78,7 +76,7 @@ async def async_get_config_entry_diagnostics(
                     "device_name": device.device_name,
                     "parent_iot_id": device.parent_iot_id,
                     "online": device.online,
-                    "properties": device.properties,
+                    "properties": _redact_sensitive(device.properties),
                     "descent_time": (
                         runtime.descent_time if runtime else None
                     ),

@@ -24,6 +24,7 @@ from .const import (
     CONF_IDENTITY_ID,
     CONF_REGISTERED_ID,
     DOMAIN,
+    LOCK_PRODUCT_KEYS,
     PLATFORMS,
     READ_ONLY_QUERIES,
     SERVICE_INVOKE_SERVICE,
@@ -145,9 +146,26 @@ def _find_coordinator(
     )
 
 
+def _check_lock_security_audit(
+    coordinator: HotataCoordinator, iot_id: str, action_type: str, identifier: str
+) -> None:
+    device = (coordinator.data or {}).get(iot_id)
+    if device and device.product_key in LOCK_PRODUCT_KEYS:
+        _LOGGER.warning(
+            "Security Audit: Admin %s invoked on smart lock device %s (name=%s, identifier=%s)",
+            action_type,
+            iot_id,
+            device.name,
+            identifier,
+        )
+
+
 def _register_services(hass: HomeAssistant) -> None:
     async def async_set_property(call: ServiceCall) -> None:
         coordinator = _find_coordinator(hass, iot_id=call.data["iot_id"])
+        _check_lock_security_audit(
+            coordinator, call.data["iot_id"], "set_property", call.data["property"]
+        )
         await coordinator.account.api.async_set_property(
             call.data["iot_id"], call.data["property"], call.data["value"]
         )
@@ -156,6 +174,9 @@ def _register_services(hass: HomeAssistant) -> None:
 
     async def async_invoke_service(call: ServiceCall) -> None:
         coordinator = _find_coordinator(hass, iot_id=call.data["iot_id"])
+        _check_lock_security_audit(
+            coordinator, call.data["iot_id"], "invoke_service", call.data["identifier"]
+        )
         await coordinator.account.api.async_invoke_service(
             call.data["iot_id"],
             call.data["identifier"],

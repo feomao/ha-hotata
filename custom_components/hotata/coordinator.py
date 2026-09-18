@@ -127,6 +127,8 @@ class HotataCoordinator(DataUpdateCoordinator[dict[str, HotataDevice]]):
                 children = await self.account.api.async_list_subdevices(
                     gateway.iot_id
                 )
+            except (HotataRateLimited, HotataAuthError):
+                raise
             except HotataError as err:
                 _LOGGER.debug(
                     "Subdevice discovery failed for %s: %s",
@@ -156,6 +158,8 @@ class HotataCoordinator(DataUpdateCoordinator[dict[str, HotataDevice]]):
                     device.properties = await self.account.api.async_get_properties(
                         device.iot_id
                     )
+                except (HotataRateLimited, HotataAuthError):
+                    raise
                 except HotataError as err:
                     _LOGGER.debug(
                         "Property update failed for %s: %s",
@@ -169,6 +173,8 @@ class HotataCoordinator(DataUpdateCoordinator[dict[str, HotataDevice]]):
                         )
                         if event is not None:
                             device.properties["KeyEvent"] = {"value": event}
+                    except (HotataRateLimited, HotataAuthError):
+                        raise
                     except HotataError as err:
                         _LOGGER.debug(
                             "Event update failed for %s: %s",
@@ -179,6 +185,8 @@ class HotataCoordinator(DataUpdateCoordinator[dict[str, HotataDevice]]):
                     device.online = await self.account.api.async_get_online(
                         device.iot_id
                     )
+                except (HotataRateLimited, HotataAuthError):
+                    raise
                 except HotataError as err:
                     _LOGGER.debug(
                         "Status update failed for %s: %s",
@@ -194,6 +202,8 @@ class HotataCoordinator(DataUpdateCoordinator[dict[str, HotataDevice]]):
                             )
                         )
                     device.thing_model = self.thing_models[cache_key]
+                except (HotataRateLimited, HotataAuthError):
+                    raise
                 except HotataError as err:
                     _LOGGER.debug(
                         "Thing-model update failed for %s: %s",
@@ -205,7 +215,7 @@ class HotataCoordinator(DataUpdateCoordinator[dict[str, HotataDevice]]):
             self._adjust_poll_interval(devices)
             return {device.iot_id: device for device in devices}
         except HotataRateLimited as err:
-            self.account.report_rate_limited()
+            self.account.report_rate_limited(detail=str(err))
             raise UpdateFailed(f"Cloud rate limit: {err}") from err
         except HotataAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err

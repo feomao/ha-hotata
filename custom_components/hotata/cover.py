@@ -24,7 +24,7 @@ from .const import (
     CURTAIN_V2_PRODUCT_KEYS,
     DOMAIN,
 )
-from .exceptions import HotataError
+from .exceptions import HotataError, HotataRateLimited
 from .coordinator import HotataCoordinator
 from .entity import (
     HotataEntity,
@@ -146,6 +146,7 @@ class HotataAirerCover(HotataEntity, CoverEntity):
         self._attr_unique_id = entity_identity(device, "airer")
         self._position: int | None = 100
         self._stop_timer = None
+        self._auto_stop_retries = 0
         self._last_motor_mode: int | None = None
 
     @property
@@ -178,6 +179,7 @@ class HotataAirerCover(HotataEntity, CoverEntity):
         return self._position == 0
 
     def _cancel_stop_timer(self) -> None:
+        self._auto_stop_retries = 0
         self.runtime.target_position = None
         if self._stop_timer is not None:
             self._stop_timer()
@@ -188,17 +190,34 @@ class HotataAirerCover(HotataEntity, CoverEntity):
         self._stop_timer = None
         try:
             await self.async_set_property("MotorControlMode", MOTOR_STOP)
-        except HotataError:
-            # Stop command failed (cloud hiccup / penalty) — retry shortly
-            # instead of letting the motor run to its limit silently.
+        except HotataRateLimited as err:
+            self._auto_stop_retries = 0
+            self.coordinator.account.report_rate_limited(detail="cover auto-stop")
+            _LOGGER.warning("Auto-stop rate limited, aborting retry: %s", err)
+            return
+        except HotataError as err:
+            # Stop command failed (cloud hiccup / network error) — retry shortly
+            # up to 3 times, aborting if account is rate-limited.
+            self._auto_stop_retries += 1
+            if self._auto_stop_retries > 3 or self.coordinator.account.rate_limited:
+                _LOGGER.warning(
+                    "Auto-stop command failed after %d retries or account rate-limited, aborting: %s",
+                    self._auto_stop_retries,
+                    err,
+                )
+                self._auto_stop_retries = 0
+                return
             _LOGGER.warning(
-                "Auto-stop command failed, retrying in %ds",
+                "Auto-stop command failed, retrying in %ds (attempt %d/3): %s",
                 _AUTO_STOP_RETRY_SECONDS,
+                self._auto_stop_retries,
+                err,
             )
             self._stop_timer = async_call_later(
                 self.hass, _AUTO_STOP_RETRY_SECONDS, self._async_auto_stop_cover
             )
             return
+        self._auto_stop_retries = 0
         runtime = self.runtime
         self._position = (
             runtime.target_position if runtime.target_position is not None else 0
