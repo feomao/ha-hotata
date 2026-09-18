@@ -1,7 +1,7 @@
 # Hotata (好太太智能设备)
 
-[![GitHub Release](https://img.shields.io/github/v/release/C3H3-AI/ha-hotata?style=flat-square)](https://github.com/C3H3-AI/ha-hotata/releases)
-[![GitHub Downloads](https://img.shields.io/github/downloads/C3H3-AI/ha-hotata/total?style=flat-square)](https://github.com/C3H3-AI/ha-hotata/releases)
+[![GitHub Release](https://img.shields.io/github/v/tag/feomao/ha-hotata?label=release&style=flat-square)](https://github.com/feomao/ha-hotata/releases)
+[![GitHub Downloads](https://img.shields.io/github/downloads/feomao/ha-hotata/total?style=flat-square)](https://github.com/feomao/ha-hotata/releases)
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5?style=flat-square)](https://github.com/hacs/integration)
 [![HA Version](https://img.shields.io/badge/Home%20Assistant-2024.12%2B-blue?style=flat-square)](https://www.home-assistant.io/)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square)](LICENSE)
@@ -59,11 +59,11 @@ Home Assistant 自定义集成，支持好太太智能晾衣机的完整控制�
 
 ### 方式一：HACS（推荐）
 
-[![Open in HACS](https://img.shields.io/badge/Open%20in-HACS-41BDF5?style=flat-square)](https://my.home-assistant.io/redirect/hacs_repository/?owner=C3H3-AI&repository=ha-hotata)
+[![Open in HACS](https://img.shields.io/badge/Open%20in-HACS-41BDF5?style=flat-square)](https://my.home-assistant.io/redirect/hacs_repository/?owner=feomao&repository=ha-hotata)
 
 1. 安装 [HACS](https://hacs.xyz/)
 2. HACS → 集成 → 右上角三点菜单 → 添加自定义存储库
-3. 仓库地址：`https://github.com/C3H3-AI/ha-hotata`
+3. 仓库地址：`https://github.com/feomao/ha-hotata`
 4. 搜索并安装 **Hotata**
 5. 重启 Home Assistant
 
@@ -71,7 +71,7 @@ Home Assistant 自定义集成，支持好太太智能晾衣机的完整控制�
 
 ```bash
 # 克隆仓库
-git clone https://github.com/C3H3-AI/ha-hotata.git
+git clone https://github.com/feomao/ha-hotata.git
 
 # 复制到 HA 自定义组件目录
 cp -r custom_components/hotata /path/to/your/ha/config/custom_components/
@@ -122,7 +122,7 @@ cp -r custom_components/hotata /path/to/your/ha/config/custom_components/
 
 > **提示**：登录成功后自动发现该账号下所有晾衣机设备，无需手动输入设备信息。
 
-### 工作原理（v4.0.0）
+### 工作原理（v4.0.5）
 
 传输层采用与官方「好太太智联」App（3.5.8）一致的**阿里云 IoT 网关通道**，支持好太太全产品线；实体按设备的 TSL 物模型 + 上报属性**动态创建**——账号下有什么设备就出现什么实体，不支持的属性不会生成死控件。
 
@@ -224,6 +224,11 @@ Token 由网关客户端在认证被拒时自动刷新（失败自动回落到�
 
 | 版本 | 说明 |
 |------|------|
+| **v4.0.5** | **品牌资产全套规范适配与安全加固**：补齐全套 6 项标准图标/Logo 资产（icon/dark/2x/logo，解决 HACS 图标异常）；强化诊断包 Token 脱敏；修复 403 限频冒泡与主备切换保障；晾衣机自动停止防死循环；门锁服务安全审计 |
+| **v4.0.4** | cover 补声明 `_attr_is_closed = None`，解决状态写入时抛 AttributeError |
+| **v4.0.3** | entity 弃用 `via_device` 改用 `via_device_id`，适配 HA 2024.12+ |
+| **v4.0.2** | 两轮 heavy probe 探活防 403 抖动循环；首次配置表单补入备用账号字段；更名机型功能配置 |
+| **v4.0.1** | DeviceInfo 注入 MAC connections；requires_report 硬件门控；负离子开关机型门控 |
 | **v4.0.0** | **重构 + domain 更名（破坏性）**：domain 由 `hotata_airer` 改为 `hotata`，仓库更名 `ha-hotata`，目录改为 `custom_components/hotata/**——需删除旧集成后重新安装**（见上方升级说明）；传输层采用官方 App 的阿里云 IoT 网关通道，按 TSL 物模型动态创建实体，支持晾衣机/窗帘机/毛巾架/门锁/摄像头/音乐盒子/传感器/插座/墙壁开关/广播全产品线；保留主备账号 403 故障切换、动态轮询、晾衣杆位置模拟；修复 TSL 物模型解析失败（此前 select 实体无法出现）；403 限频不再当认证错误重试；许可改为 GPL-3.0 |
 | **v3.1.1** | 机型功能门控：按 DeviceModelType 隐藏机型不支持的开关与剩余时间传感器，修复新传感器缺失翻译名的问题 |
 | **v3.1.0** | **主备账号自动切换**：403 限频时自动切换备用账号、处罚解除后探测切回；重写故障切换状态机（按身份独立的处罚期限/凭证槽位/运行时 Store 持久化，重启不丢切换状态）；修复限频通知与实际行为不符、备用密码泄漏到诊断文件、token 刷新触发整集成重载等问题；新增温度/湿度/错误码/原始属性传感器与实体类别规范 |

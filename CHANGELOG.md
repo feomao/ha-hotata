@@ -2,6 +2,12 @@
 
 > 最低 Home Assistant 版本：**2024.12.0**（声明于 `hacs.json`）
 
+## [4.0.5] - 2026-09-18
+
+- **brand**：补齐 HACS 与 Home Assistant 品牌资源标准规范文件，包括 `icon.png`、`icon@2x.png`、`dark_icon.png`、`dark_icon@2x.png`、`logo.png`、`dark_logo.png`，替换旧版图标与旧版 logo，解决 HACS 深色模式及高分屏下的图标异常问题
+- **security**：强化诊断包（diagnostics）敏感 Token 及身份标识脱敏；修复 coordinator 403 限频及认证异常冒泡，保障主备账号故障切换与退避机制；晾衣架自动停止增加最大重试（3次）防死循环；智能门锁管理服务增加安全审计日志
+- **manifest.json**：升级版本号至 4.0.5
+
 ## [4.0.4] - 2026-09-16
 
 - **cover.py**：`HotataRailCover` 补声明 `_attr_is_closed = None`。HA 的 `CoverEntity` 对该属性只做类型标注、无默认值（相邻的 `_attr_is_closing` / `_attr_is_opening` 均有 `= None`），未声明会让 `is_closed` 在每次状态写入时抛 `AttributeError`；每次写状态会读两次且 `cached_property` 不缓存异常，故为持续报错而非偶发
